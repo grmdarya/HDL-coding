@@ -1,0 +1,39 @@
+|COMPARATOR
+enable => A.IN1
+enable => state.DATAA
+reset => state.OUTPUTSELECT
+reset => C$latch.ACLR
+reset => B$latch.ACLR
+reset => A$latch.ACLR
+reset => state[1].DATAIN
+A0_A3[0] => LessThan0.IN4
+A0_A3[0] => Equal0.IN3
+A0_A3[0] => LessThan1.IN4
+A0_A3[1] => LessThan0.IN3
+A0_A3[1] => Equal0.IN2
+A0_A3[1] => LessThan1.IN3
+A0_A3[2] => LessThan0.IN2
+A0_A3[2] => Equal0.IN1
+A0_A3[2] => LessThan1.IN2
+A0_A3[3] => LessThan0.IN1
+A0_A3[3] => Equal0.IN0
+A0_A3[3] => LessThan1.IN1
+B0_B3[0] => LessThan0.IN8
+B0_B3[0] => Equal0.IN7
+B0_B3[0] => LessThan1.IN8
+B0_B3[1] => LessThan0.IN7
+B0_B3[1] => Equal0.IN6
+B0_B3[1] => LessThan1.IN7
+B0_B3[2] => LessThan0.IN6
+B0_B3[2] => Equal0.IN5
+B0_B3[2] => LessThan1.IN6
+B0_B3[3] => LessThan0.IN5
+B0_B3[3] => Equal0.IN4
+B0_B3[3] => LessThan1.IN5
+A << A$latch.DB_MAX_OUTPUT_PORT_TYPE
+B << B$latch.DB_MAX_OUTPUT_PORT_TYPE
+C << C$latch.DB_MAX_OUTPUT_PORT_TYPE
+state[0] << state.DB_MAX_OUTPUT_PORT_TYPE
+state[1] << reset.DB_MAX_OUTPUT_PORT_TYPE
+
+
