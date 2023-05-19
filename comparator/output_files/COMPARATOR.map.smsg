@@ -1,0 +1,2 @@
+Info (10281): Verilog HDL Declaration information at COMPARATOR.v(2): object "enable" differs only in case from object "ENABLE" in the same scope File: E:/APP/DASHA/COMPARATOR.v Line: 2
+Info (10281): Verilog HDL Declaration information at COMPARATOR.v(3): object "reset" differs only in case from object "RESET" in the same scope File: E:/APP/DASHA/COMPARATOR.v Line: 3
