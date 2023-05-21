@@ -1,0 +1,100 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.numeric_std.all;
+use work.my_package.all;
+
+ENTITY alu IS
+	GENERIC (size: NATURAL := 32;
+		 cnt: INTEGER := 4
+	);
+	PORT (clk: in STD_LOGIC;
+	      reset: IN STD_LOGIC;
+	      op_sel: IN my_op ; --(others => '1'); 
+	      op1, op2: IN STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+	      res_alu: OUT STD_LOGIC_VECTOR (2*size-1 DOWNTO 0);
+	      Carry_in: IN STD_LOGIC;
+	      Carry_out: OUT STD_LOGIC
+	);
+END;
+
+ARCHITECTURE behav_alu OF alu IS
+--сумматор
+	COMPONENT adder
+		PORT(a, b: IN STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+	             Cin: IN STD_LOGIC;
+	             S: OUT STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+	             Cout: OUT STD_LOGIC
+		);
+	END COMPONENT;
+--вычитатель
+	COMPONENT sub
+		PORT(sub1_in, sub2_in: IN STD_LOGIC_VECTOR (size-1 downto 0);
+		     c: IN STD_LOGIC;
+	             diff: OUT STD_LOGIC_VECTOR(size-1 DOWNTO 0);
+		     bor: OUT STD_LOGIC
+		);
+	END COMPONENT;
+--инвертор
+	COMPONENT inv
+		PORT(x: IN STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+	     	     y: OUT STD_LOGIC_VECTOR (size-1 DOWNTO 0)
+		);
+	END COMPONENT;
+--умножитель
+	COMPONENT mul
+		PORT(mul1_in, mul2_in : IN STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+		     mul_out: OUT STD_LOGIC_VECTOR (2*size-1 DOWNTO 0)
+		);
+	END COMPONENT;
+
+	SIGNAL Carry_out_add: STD_LOGIC; 
+	SIGNAL Carry_out_sub: STD_LOGIC;
+	SIGNAL res_1: STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+	SIGNAL res_2: STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+	SIGNAL res_3: STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+	SIGNAL res_4: STD_LOGIC_VECTOR (2*size-1 DOWNTO 0);
+	SIGNAL sig1: STD_LOGIC_VECTOR (32 DOWNTO 0); --тут подумать
+	SIGNAL sig2: STD_LOGIC_VECTOR (32 DOWNTO 0); --тут подумать
+
+BEGIN
+	FA: adder PORT MAP(a=>op1, b=>op2, Cin=>Carry_in, S=>res_1, Cout=>Carry_out_add);
+	FS: sub PORT MAP(sub1_in=>op1, sub2_in=>op2, c=>Carry_in, diff=>res_2, bor=>Carry_out_sub); --тут подумать
+	FI: inv PORT MAP(x=>op1, y=>res_3);
+	FM: mul PORT MAP(mul1_in=>op1, mul2_in=>op2, mul_out=>res_4);
+	
+alu_proc: PROCESS(clk, reset) 
+
+	variable var_1 : STD_LOGIC_VECTOR (size DOWNTO 0);
+	
+BEGIN
+
+		IF (reset = '1') THEN
+			res_alu <= (others =>‘0’);
+		END IF;
+
+		IF RISING_EDGE(clk) THEN
+			IF(op_sel = SUM_1) THEN
+				var_1 := STD_LOGIC_VECTOR(unsigned('0' & op1) + unsigned('0' & op2));
+				res_alu(size-1 downto 0) <= var_1(size-1 downto 0);
+				Carry_out <= var_1(size);
+				res_alu(2*size-1 downto size) <= (others => '0');
+			ELSIF (op_sel = SUM_2) THEN
+				res_alu(size-1 downto 0) <= res_1;
+				res_alu(2*size-1 downto size) <= (others => '0');
+			ELSIF (op_sel = SUB_1) THEN
+				var_1 := STD_LOGIC_VECTOR(unsigned('0' & op1) - unsigned('0' & op2));
+				res_alu(size-1 downto 0) <= var_1(size-1 downto 0);
+				Carry_out <= var_1(size);
+				res_alu(2*size-1 downto size) <= (others => '0');
+			ELSIF (op_sel = SUB_2) THEN
+				res_alu(size-1 downto 0) <= res_2;
+				res_alu(2*size-1 downto size) <= (others => '0');
+			ELSIF (op_sel = INVERT) THEN	
+				res_alu(size-1 downto 0) <= res_3;
+				res_alu(2*size-1 downto size) <= (others => '0');
+			ELSIF (op_sel = MULT) THEN
+				res_alu <= res_4;
+			END IF;
+		END IF;		 
+	END PROCESS alu_proc;
+END behav_alu;

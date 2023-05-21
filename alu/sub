@@ -1,0 +1,26 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY sub IS 
+	GENERIC (cnt: NATURAL := 32);
+	PORT (sub1_in, sub2_in: IN STD_LOGIC_VECTOR (cnt-1 DOWNTO 0);
+	      c: IN STD_LOGIC;
+	      diff: OUT STD_LOGIC_VECTOR (cnt-1 DOWNTO 0);
+	      bor: OUT STD_LOGIC
+	);
+END;
+
+ARCHITECTURE behav_sub OF sub IS
+	signal borBits : std_logic_vector(cnt-1 downto 0); 
+BEGIN
+	diff(0) <= sub1_in(0) XOR sub2_in(0) XOR c;
+	borBits(0) <= (NOT sub1_in(0) AND sub2_in(0)) OR (sub2_in(0) AND c) OR (NOT sub1_in(0) AND c);
+	bor <= borBits(cnt-1);
+
+	subtraction:
+	for i in 1 to cnt-1 generate
+		diff(i) <= sub1_in(i) XOR sub2_in(i) XOR borBits(i-1);
+		borBits(i) <= ((NOT sub1_in(i) AND sub2_in(i)) OR (sub2_in(i) AND borBits(i-1)) OR (NOT sub1_in(i) AND borBits(i-1)));
+	end generate subtraction;
+END behav_sub;
+

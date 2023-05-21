@@ -1,0 +1,15 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.numeric_std.all;
+
+ENTITY mul IS
+	GENERIC (cnt: NATURAL := 32);
+	PORT (mul1_in, mul2_in: IN STD_LOGIC_VECTOR (cnt-1 DOWNTO 0);
+	      mul_out: OUT STD_LOGIC_VECTOR (2*cnt-1 DOWNTO 0)
+	);
+END;
+
+ARCHITECTURE behav_mul OF mul IS
+BEGIN
+	mul_out <= STD_LOGIC_VECTOR(unsigned(mul1_in) * unsigned(mul2_in));
+END behav_mul;

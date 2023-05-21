@@ -1,0 +1,32 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY adder IS
+	GENERIC (cnt : NATURAL := 32);
+	PORT (
+		a 		: IN STD_LOGIC_VECTOR (cnt-1 DOWNTO 0);
+		b 		: IN STD_LOGIC_VECTOR (cnt-1 DOWNTO 0);
+	    	Cin 		: IN STD_LOGIC := '0';
+		S 		: OUT STD_LOGIC_VECTOR (cnt-1 DOWNTO 0);
+		Cout		: OUT STD_LOGIC
+	);
+END;
+
+ARCHITECTURE behav_fa OF adder IS 
+	signal carryBits : std_logic_vector(cnt-1 downto 0); 
+BEGIN
+	
+	S(0) <= a(0) xor b(0) xor Cin;
+	carryBits(0) <= ( (a(0) xor b(0)) and Cin ) or (a(0) and b(0));
+
+	Cout <= carryBits(cnt-1);
+
+	sum: 
+	for i in 1 to cnt-1 generate
+	
+		S(i) <= a(i) xor b(i) xor carryBits(i - 1);
+		carryBits(i) <= ( (a(i) xor b(i)) and carryBits(i - 1) ) or (a(i) and b(i));
+		
+	end generate sum;
+
+END behav_fa;

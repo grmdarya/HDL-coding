@@ -1,0 +1,139 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.numeric_std.all;
+use work.my_package.all;
+
+ENTITY alu_testbench IS
+
+END alu_testbench;
+
+ARCHITECTURE behav_testbench OF alu_testbench IS
+	COMPONENT alu IS
+		GENERIC (size: NATURAL := 32);
+		PORT (clk: IN STD_LOGIC; 
+	      	             reset: IN STD_LOGIC;
+	      	             op_sel: IN my_op ; --(others => '1'); 
+	              	 op1, op2: IN STD_LOGIC_VECTOR (size-1 DOWNTO 0);
+	              	 res_alu: OUT STD_LOGIC_VECTOR (2*size-1 DOWNTO 0);
+	              	 Carry_in: IN STD_LOGIC := '0';
+	              	 Carry_out: OUT STD_LOGIC
+		);
+		END COMPONENT;	
+	
+		constant size : natural := 32;	
+
+--Входы
+	SIGNAL  	clk_sig : STD_LOGIC := '0';
+	SIGNAL	reset_sig : STD_LOGIC := '0';
+	SIGNAL  	op_sel_sig : my_op := START;
+	SIGNAL	op1_sig : STD_LOGIC_VECTOR (size-1 DOWNTO 0) := (others => '0');
+	SIGNAL	op2_sig : STD_LOGIC_VECTOR (size-1 DOWNTO 0) := (others => '0');
+	SIGNAL  	Carry_in_sig : STD_LOGIC := '0';	
+--Выходы
+	SIGNAL	res_alu_sig : STD_LOGIC_VECTOR (2*size-1 DOWNTO 0);
+	SIGNAL  	Carry_out_sig : STD_LOGIC;
+	SIGNAL  	error_sig: BIT := '0';
+--Числа
+	SIGNAL num1: INTEGER := 2;
+	SIGNAL num2: INTEGER := 10;
+	
+	signal res_alu_sig_2 : STD_LOGIC_VECTOR (2*size-1 DOWNTO 0);
+	SIGNAL Carry_out_sig_2 : STD_LOGIC;
+	
+BEGIN
+
+	op1_sig <= std_logic_vector(to_unsigned(num1, size));
+	op2_sig <= std_logic_vector(to_unsigned(num2, size));
+
+	alu_tb: alu PORT MAP (
+		clk => clk_sig,
+		reset => reset_sig,
+		op_sel => op_sel_sig,
+		op1 => op1_sig,
+		op2 => op2_sig,
+		res_alu => res_alu_sig,
+		Carry_in => Carry_in_sig,
+		Carry_out => Carry_out_sig
+	);
+
+	clk_proc : process begin
+	
+		loop
+			wait for 20 fs;
+			clk_sig <= not clk_sig;
+		end loop;
+		
+	end process clk_proc;
+
+	tb_proc: PROCESS(clk_sig, reset_sig)
+	
+		variable var_1 : STD_LOGIC_VECTOR (size DOWNTO 0);
+	
+	BEGIN
+		IF RISING_EDGE(clk_sig) THEN
+
+			IF(op_sel_sig = START) THEN
+
+				op_sel_sig <= SUM_1;
+
+			ELSIF(op_sel_sig = SUM_1 OR op_sel_sig = SUM_2) THEN
+
+				var_1 := STD_LOGIC_VECTOR(unsigned('0' & op1_sig) + unsigned('0' & op2_sig));
+				res_alu_sig_2(size-1 downto 0) <= var_1(size-1 downto 0);
+				Carry_out_sig_2 <= var_1(size);
+				res_alu_sig_2(2*size-1 downto size) <= (others => '0');
+
+				--Carry_out_sig & res_alu_sig(size-1 downto 0) <= STD_LOGIC_VECTOR(unsigned('0' & op1_sig) + unsigned('0' & op2_sig));
+
+				IF(op_sel_sig = SUM_1) THEN
+
+					op_sel_sig <= SUM_2;
+
+				ELSE
+					op_sel_sig <= SUB_1;
+
+				END IF;
+
+			ELSIF(op_sel_sig = SUB_1 OR op_sel_sig = SUB_2) THEN
+			
+				var_1 := STD_LOGIC_VECTOR(unsigned('0' & op1_sig) - unsigned('0' & op2_sig));
+				res_alu_sig_2(size-1 downto 0) <= var_1(size-1 downto 0);
+				Carry_out_sig_2 <= var_1(size);
+				res_alu_sig_2(2*size-1 downto size) <= (others => '0');
+			
+				--Carry_out_sig & res_alu_sig(size-1 downto 0) <= STD_LOGIC_VECTOR(unsigned('0' & op1_sig) - unsigned('0' & op2_sig));
+				
+				IF(op_sel_sig = SUB_1) THEN
+
+					op_sel_sig <= SUB_2;
+				ELSE
+					op_sel_sig <= INVERT;
+
+				END IF;
+
+			ELSIF(op_sel_sig = INVERT) THEN
+
+				res_alu_sig_2(size-1 downto 0) <= NOT op1_sig;			
+				
+				op_sel_sig <= MULT;
+			
+			ELSIF(op_sel_sig = MULT) THEN
+
+				res_alu_sig_2(2*size-1 downto 0) <= STD_LOGIC_VECTOR(unsigned(op1_sig) * unsigned(op2_sig));
+			
+			ELSIF(op_sel_sig = NOTHING) THEN
+			
+				op_sel_sig <= op_sel_sig;
+				
+			END IF;	
+			
+			IF(res_alu_sig /= res_alu_sig_2) THEN
+			
+				error_sig <= '1';
+			
+			END IF;
+		END IF;
+							 				
+	END process tb_proc;
+
+END behav_testbench;

@@ -1,0 +1,9 @@
+library IEEE;
+use IEEE.std_logic_1164.all;  
+use IEEE.std_logic_unsigned.all; 
+
+PACKAGE my_package IS
+	constant LOG_COMMAND_COUNT	: NATURAL:= 3;
+	type my_op is (START, SUM_1, SUM_2, SUB_1, SUB_2, INVERT, MULT, NOTHING);
+
+END my_package;
