@@ -1,0 +1,69 @@
+-- Реализовать схему Y=not(A) and not(B) and (C or D)
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity circuit is port (
+	a		:	in		std_logic;
+	b		:	in		std_logic;
+	c		:	in		std_logic;
+	d		:	in		std_logic;
+	y		:	out		std_logic
+);
+end circuit;
+
+architecture a_circuit of circuit is 
+
+	component myNot is port (
+		my_in			:	in		std_logic;
+		my_out		:	out		std_logic
+	);
+	end component;
+
+	component and2 is port (
+		my_in_1		:	in		std_logic;
+		my_in_2		:	in		std_logic;
+		my_out		:	out		std_logic
+	);
+	end component;
+
+	component or2 is port (
+		my_in_1		:	in		std_logic;
+		my_in_2		:	in		std_logic;
+		my_out		:	out		std_logic
+	);
+	end component;
+
+	signal sig1, sig2, sig3, sig4 : std_logic;
+
+begin
+	
+	circ_1 : myNot port map(
+		my_in => a,
+		my_out => sig1
+	);
+	
+	circ_2 : myNot port map(
+		my_in => b,
+		my_out => sig2
+	);
+	
+	circ_3 : and2 port map(
+		my_in_1 => sig1,
+		my_in_2 => sig2,
+		my_out => sig3
+	);
+	
+	circ_4 : or2 port map(
+		my_in_1 => c,
+		my_in_2 => d,
+		my_out => sig4
+	);
+	
+	circ_5 : and2 port map(
+		my_in_1 => sig3,
+		my_in_2 => sig4,
+		my_out => y
+	);
+	
+end a_circuit;
+

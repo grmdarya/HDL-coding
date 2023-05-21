@@ -1,0 +1,109 @@
+-- Реализовать компонент памяти. Разрядность слова 32 бита.
+-- Компонент включает в себя блок памяти и набор внешних интерфейсов (6 штук).
+-- Интерфейсы параллельны и синхронны. Значение анализируется по восходящему фронту такта.
+-- Тип интерфейса: для передачи адреса, данных на чтение/запись используются выделенные линии со след. сигналами: входные сигналы для определения направления обмена и действительность выставляемого внешним устройством адреса. Выходной сигнал указывает при записи факт успешного защелкивания адреса в памяти.
+library ieee;
+use ieee.std_logic_1164.all;
+use work.my_package.all;
+use ieee.numeric_std.all; 
+
+entity memory is
+	port (
+	clk	:in		std_logic;
+	addr	:in		my_word_type(AMOUNT_INTERFACE-1 downto 0);
+	addr_st	:in		std_logic_vector(AMOUNT_INTERFACE-1 downto 0);
+dir:in		std_logic_vector(AMOUNT_INTERFACE-1 downto 0);
+data_in	:in	my_word_type(AMOUNT_INTERFACE-1 downto 0);
+data_st	:in	std_logic_vector(AMOUNT_INTERFACE-1 downto 0);
+data_ready:in	std_logic_vector(AMOUNT_INTERFACE-1 downto 0);
+addr_save:out	std_logic_vector(AMOUNT_INTERFACE-1 downto 0);
+data_save:out	std_logic_vector(AMOUNT_INTERFACE-1 downto 0);
+data_out:out	my_word_type(AMOUNT_INTERFACE-1 downto 0);
+data_end:out	std_logic_vector(AMOUNT_INTERFACE-1 downto 0)
+);
+end memory;
+
+architecture a_memory of memory is
+	
+	type STATES is (GET_ADDR, GET_DATA, END_WRITE, SET_DATA, SEND_DATA, END_READ);
+	type my_states_type is array (natural range <>) of STATES;
+	
+	signal sts: my_states_type(AMOUNT_INTERFACE-1 downto 0) := (others => GET_ADDR);
+	
+	signal memoryBlock: my_word_type(0 to 2**AMOUNT_WORD - 1);
+
+	signal tmpAddr: my_word_type(AMOUNT_INTERFACE-1 downto 0);
+	
+begin
+	
+	p_work : process(clk) begin
+	
+		if(clk'event and clk = '1') then
+		
+			for i in AMOUNT_INTERFACE-1 downto 0 loop
+			
+				if (sts(i) = GET_ADDR) then
+				
+					if (addr_st(i) = '1') then
+					
+						tmpAddr(i) <= addr(i);
+						
+						addr_save(i) <= '1';
+						
+						if (dir(i) = '1') then
+							sts(i) <= SET_DATA;
+						elsif (dir(i) = '0') then
+							sts(i) <= GET_DATA;
+						end if;
+						
+					end if;
+					
+				elsif (sts(i) = GET_DATA) then
+					
+					if (data_st(i) = '1') then
+					
+				memoryBlock(to_integer(unsigned(tmpAddr(i)))) <= data_in(i);
+						
+						data_save(i) <= '1';
+						addr_save(i) <= '0';
+						
+						sts(i) <= END_WRITE;
+						
+					end if;
+					
+				elsif (sts(i) = END_WRITE) then
+					
+					data_save(i) <= '0';
+					sts(i) <= GET_ADDR;
+					
+				elsif (sts(i) = SET_DATA) then
+					
+					if (data_ready(i) = '1') then
+						addr_save(i) <= '0';
+						sts(i) <= SEND_DATA;
+					elsif (data_ready(i) = '0') then
+						sts(i) <= SET_DATA;
+					end if;
+					
+				elsif (sts(i) = SEND_DATA) then
+					
+				data_out(i) <= memoryBlock(to_integer(unsigned(tmpAddr(i))));
+					data_end(i) <= '1';
+					
+					sts(i) <= END_READ;
+					
+				elsif (sts(i) = END_READ) then
+					
+					data_end(i) <= '0';
+					sts(i) <= GET_ADDR;
+					
+				end if;
+			
+			end loop;
+		
+		end if;
+	
+	end process p_work;
+	
+	
+end architecture a_memory;
