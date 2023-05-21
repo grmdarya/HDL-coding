@@ -1,0 +1,139 @@
+-- Реализовать модель элементарной вычислительной системы, параллельно обрабатывающую разные запросы. Смоделировать конфликт по данным.
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.my_package.all;
+
+entity conv is
+    generic(
+        CONV_COUNT :  natural
+    );
+    port (
+
+        reset       : in    std_logic;
+        clock       : in    std_logic;
+
+        command     : in    comm_array_t(CONV_COUNT - 1 downto 0);
+
+        addr_1      : out   addr_array_t(CONV_COUNT - 1  downto 0);
+        addr_2      : out   addr_array_t(CONV_COUNT - 1  downto 0);
+
+        operand_1   : in    data_array_t(CONV_COUNT - 1 downto 0);
+        operand_2   : in    data_array_t(CONV_COUNT - 1 downto 0);
+
+        result      : out   data_array_t(CONV_COUNT - 1 downto 0);
+        result_addr : out   addr_array_t(CONV_COUNT - 1  downto 0);
+        is_write    : out   std_logic_vector(CONV_COUNT - 1 downto 0)
+
+    );
+end conv;
+
+architecture a_conv of conv is
+
+    constant REG_COUNT  : natural := 16;
+    constant PAUSE_TIME : natural := 1;
+
+    type data_matrix_t is array (natural range <>) of data_array_t(REG_COUNT - 1 downto 0);
+
+    signal regs   : data_matrix_t(CONV_COUNT - 1 downto 0);
+
+    signal local_comm_read   : std_logic_vector(CONV_COUNT - 1 downto 0);
+    signal local_code        : code_array_t(CONV_COUNT - 1 downto 0);
+    signal local_addr_1      : addr_array_t(CONV_COUNT - 1  downto 0);
+    signal local_addr_2      : addr_array_t(CONV_COUNT - 1  downto 0);
+    signal local_result_addr : addr_array_t(CONV_COUNT - 1  downto 0);
+    signal local_result      : data_array_t(CONV_COUNT - 1  downto 0);
+
+    signal local_is_write    : std_logic_vector(CONV_COUNT - 1 downto 0);
+
+    signal r_result_addr : addr_array_t(CONV_COUNT - 1  downto 0);
+
+begin
+
+    assign_generate: for i in CONV_COUNT - 1 downto 0 generate
+
+        addr_1(i)      <= local_addr_1(i);
+        addr_2(i)      <= local_addr_2(i);
+        result_addr(i) <= r_result_addr(i);
+
+        result(i) <= local_result(i);
+
+        is_write(i) <= local_is_write(i);
+
+    end generate assign_generate;
+
+    main : process(reset, clock) begin
+
+        if(reset = '1') then
+
+            local_result <= (others => EMPTY_DATA);
+
+            regs   <= (others => (others => EMPTY_DATA));
+
+            local_code        <= (others => NOP_COM);
+            local_addr_1      <= (others => EMPTY_ADDR);
+            local_addr_2      <= (others => EMPTY_ADDR);
+            local_result_addr <= (others => EMPTY_ADDR);
+            r_result_addr     <= (others => EMPTY_ADDR);
+
+            local_is_write    <= (others => '0');
+
+        elsif(clock'event and clock = '1') then
+
+            for i in CONV_COUNT - 1 downto 0 loop
+
+                local_code(i)        <= command(i)(COMM_SIZE - 1 downto COMM_SIZE - CODE_SIZE);
+                local_addr_1(i)      <= command(i)(3 * ADDR_SIZE - 1 downto 2 * ADDR_SIZE);
+                local_addr_2(i)      <= command(i)(2 * ADDR_SIZE - 1 downto ADDR_SIZE);
+                local_result_addr(i) <= command(i)(ADDR_SIZE - 1 downto 0);
+
+                r_result_addr(i) <= local_result_addr(i);
+
+                if(local_code(i) = NOP_COM) then
+
+                    local_is_write(i) <= '0';
+
+                elsif(local_code(i) = SUM_COM) then
+
+                    local_result(i) <= std_logic_vector(
+                        signed(regs(i)(to_integer(unsigned(local_addr_1(i))))) +
+                        signed(regs(i)(to_integer(unsigned(local_addr_2(i)))))
+                    );
+
+                    local_is_write(i) <= '1';
+
+                elsif(local_code(i) = SUB_COM) then
+
+                    local_result(i) <= std_logic_vector(
+                        signed(regs(i)(to_integer(unsigned(local_addr_1(i))))) -
+                        signed(regs(i)(to_integer(unsigned(local_addr_2(i)))))
+                    );
+
+                    local_is_write(i) <= '1';
+
+               elsif(local_code(i) = LOAD_COM) then
+
+                    regs(i)(to_integer(unsigned(local_result_addr(i)))) <= operand_1(i);
+
+                    local_is_write(i) <= '0';
+
+                elsif(local_code(i) = STORE_COM) then
+
+                    local_result(i) <= regs(i)(to_integer(unsigned(local_addr_1(i))));
+
+                    local_is_write(i) <= '1';
+
+                else
+
+                    local_is_write(i) <= '0';
+
+                end if;
+
+            end loop;
+
+        end if;
+
+    end process main;
+
+
+end architecture a_conv;

@@ -1,0 +1,150 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.my_package.all;
+
+-------------------------------------------
+
+entity conv_tb is
+end conv_tb;
+
+architecture a_conv_tb of conv_tb is
+
+    component conv is
+        generic(
+            CONV_COUNT :  natural
+        );
+        port (
+
+            reset       : in    std_logic;
+            clock       : in    std_logic;
+
+            command     : in    comm_array_t(CONV_COUNT - 1 downto 0);
+
+            addr_1      : out   addr_array_t(CONV_COUNT - 1  downto 0);
+            addr_2      : out   addr_array_t(CONV_COUNT - 1  downto 0);
+
+            operand_1   : in    data_array_t(CONV_COUNT - 1 downto 0);
+            operand_2   : in    data_array_t(CONV_COUNT - 1 downto 0);
+
+            result      : out   data_array_t(CONV_COUNT - 1 downto 0);
+            result_addr : out   addr_array_t(CONV_COUNT - 1  downto 0);
+            is_write    : out   std_logic_vector(CONV_COUNT - 1 downto 0)
+
+
+        );
+    end component;
+
+    constant CONV_COUNT : natural := 2;
+
+    signal reset       : std_logic := '1';
+    signal clock       : std_logic := '0';
+    signal command     : comm_array_t(CONV_COUNT - 1 downto 0);
+    signal operand_1   : data_array_t(CONV_COUNT - 1 downto 0);
+    signal operand_2   : data_array_t(CONV_COUNT - 1 downto 0);
+
+    signal addr_1      : addr_array_t(CONV_COUNT-1 downto 0);
+    signal addr_2      : addr_array_t(CONV_COUNT-1 downto 0);
+
+    signal result      : data_array_t(CONV_COUNT-1 downto 0);
+    signal result_addr : addr_array_t(CONV_COUNT-1 downto 0);
+
+    signal is_write : std_logic_vector(CONV_COUNT - 1 downto 0);
+
+    signal memory : data_array_t(0 to 2**(ADDR_SIZE + 1) - 1);
+
+    type natural_array_t is array (natural range <>) of natural;
+
+    signal next_comm : natural_array_t(0 to CONV_COUNT - 1) := (others => 0);
+
+begin
+
+    reset <= '0' after 10 fs;
+
+    conv_1 : conv generic map (
+        CONV_COUNT => CONV_COUNT
+    )
+    port map (
+        reset       => reset,
+        clock       => clock,
+        command     => command,
+        addr_1      => addr_1,
+        addr_2      => addr_2,
+        operand_1   => operand_1,
+        operand_2   => operand_2,
+        result      => result,
+        result_addr => result_addr,
+        is_write    => is_write
+    );
+
+    p_clk : process begin
+
+            loop
+                wait for 20 fs;
+                clock <= not clock;
+            end loop;
+
+    end process p_clk;
+
+    main_tb : process(clock, reset) begin
+
+        if(reset = '1') then
+			
+			next_comm(0) <= 5;
+			next_comm(1) <= 15;			
+
+            memory(05) <= (LOAD_COM  & std_logic_vector(to_signed(24, ADDR_SIZE)) & EMPTY_ADDR & std_logic_vector(to_signed(1, ADDR_SIZE)));
+            memory(06) <= (LOAD_COM  & std_logic_vector(to_signed(25, ADDR_SIZE)) & EMPTY_ADDR & std_logic_vector(to_signed(2, ADDR_SIZE)));
+            memory(07) <= (SUM_COM   & std_logic_vector(to_signed( 1, ADDR_SIZE)) & std_logic_vector(to_signed(2, ADDR_SIZE)) & std_logic_vector(to_signed(26, ADDR_SIZE)));
+            memory(08) <= (NOP_COM   & EMPTY_ADDR                                 & EMPTY_ADDR & EMPTY_ADDR);
+            memory(09) <= (LOAD_COM  & std_logic_vector(to_signed(26, ADDR_SIZE)) & EMPTY_ADDR & std_logic_vector(to_signed(3, ADDR_SIZE)));
+            memory(10) <= (STORE_COM & std_logic_vector(to_signed( 3, ADDR_SIZE)) & EMPTY_ADDR & std_logic_vector(to_signed(27, ADDR_SIZE)));
+            memory(11) <= (STOP_COM  & EMPTY_ADDR                                 & EMPTY_ADDR & EMPTY_ADDR);
+
+            memory(15) <= (LOAD_COM  & std_logic_vector(to_signed(28, ADDR_SIZE)) & EMPTY_ADDR & std_logic_vector(to_signed(1, ADDR_SIZE)));
+            memory(16) <= (LOAD_COM  & std_logic_vector(to_signed(29, ADDR_SIZE)) & EMPTY_ADDR & std_logic_vector(to_signed(2, ADDR_SIZE)));
+            memory(17) <= (SUM_COM   & std_logic_vector(to_signed( 1, ADDR_SIZE)) & std_logic_vector(to_signed(2, ADDR_SIZE)) & std_logic_vector(to_signed(30, ADDR_SIZE)));
+            memory(18) <= (LOAD_COM  & std_logic_vector(to_signed(30, ADDR_SIZE)) & EMPTY_ADDR & std_logic_vector(to_signed(3, ADDR_SIZE)));
+            memory(19) <= (NOP_COM   & EMPTY_ADDR                                 & EMPTY_ADDR & EMPTY_ADDR);
+            memory(20) <= (STORE_COM & std_logic_vector(to_signed( 3, ADDR_SIZE)) & EMPTY_ADDR & std_logic_vector(to_signed(31, ADDR_SIZE)));
+            memory(21) <= (STOP_COM  & EMPTY_ADDR                                 & EMPTY_ADDR & EMPTY_ADDR);
+
+            memory(24) <= std_logic_vector(to_signed(1, DATA_SIZE));
+            memory(25) <= std_logic_vector(to_signed(2, DATA_SIZE));
+            memory(26) <= std_logic_vector(to_signed(5, DATA_SIZE));
+
+            memory(28) <= std_logic_vector(to_signed(1, DATA_SIZE));
+            memory(29) <= std_logic_vector(to_signed(2, DATA_SIZE));
+            memory(30) <= std_logic_vector(to_signed(5, DATA_SIZE));
+
+            command(0) <= EMPTY_COMM;
+            command(1) <= EMPTY_COMM;
+
+        elsif(clock'event and clock = '0') then
+
+            for i in 0 to CONV_COUNT - 1 loop
+
+                if(memory(next_comm(i))(COMM_SIZE - 1 downto COMM_SIZE - CODE_SIZE) /= STOP_COM) then
+
+                    operand_1(i) <= memory(to_integer(unsigned(addr_1(i))));
+                    operand_2(i) <= memory(to_integer(unsigned(addr_2(i))));
+
+                    next_comm(i)   <= next_comm(i) + 1;
+                    command(i) <= memory(next_comm(i));
+
+
+                end if;
+
+                if(is_write(i) = '1') then
+
+                    memory(to_integer(unsigned(result_addr(i)))) <= result(i);
+
+                end if;
+
+            end loop;
+
+        end if;
+
+    end process main_tb;
+
+end a_conv_tb;
